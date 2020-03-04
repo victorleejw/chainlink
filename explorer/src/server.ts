@@ -43,6 +43,7 @@ export default function server(): http.Server {
     }),
   )
   app.use(express.json())
+  console.log('test')
   app.use(
     express.static('client/build', {
       maxAge: '1y',
