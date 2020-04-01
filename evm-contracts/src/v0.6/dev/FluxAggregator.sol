@@ -153,7 +153,7 @@ contract FluxAggregator is AggregatorInterface, Owned {
     onlyOwner()
     onlyUnenabledAddress(_oracle)
   {
-    require(oracleCount() < 42);
+    require(oracleCount() < 42, "Oracle limit exceeded");
     require(_admin != address(0));
     require(oracles[_oracle].admin == address(0) || oracles[_oracle].admin == _admin);
     oracles[_oracle].startingRound = getStartingRound(_oracle);
@@ -470,7 +470,7 @@ contract FluxAggregator is AggregatorInterface, Owned {
   function updateAdmin(address _oracle, address _newAdmin)
     external
   {
-    require(oracles[_oracle].admin == msg.sender);
+    require(oracles[_oracle].admin == msg.sender, "Only admin can update admin");
     oracles[_oracle].admin = _newAdmin;
 
     emit OracleAdminUpdated(_oracle, _newAdmin);
@@ -599,14 +599,9 @@ contract FluxAggregator is AggregatorInterface, Owned {
     view
     returns (bool)
   {
-    bytes memory error = validateOracleRound(_round);
-    if (error.length != 0) return false;
+    if (validateOracleRound(_round).length != 0) return false;
 
-    if (supersedable) {
-      return delayed(_round);
-    } else {
-      return validateActiveRound(_round).length == 0;
-    }
+    return supersedable ? delayed(_round) : acceptingSubmissions(_round);
   }
 
   function validateOracleRound(uint32 _id)
@@ -643,12 +638,12 @@ contract FluxAggregator is AggregatorInterface, Owned {
     return _id == reportingRoundId.add(1);
   }
 
-  function validateActiveRound(uint32 _id)
+  function acceptingSubmissions(uint32 _id)
     private
     view
-    returns (bytes memory)
+    returns (bool)
   {
-    if (rounds[_id].details.maxAnswers == 0) return "Round not active";
+    return rounds[_id].details.maxAnswers != 0;
   }
 
   function initializeNewRound(uint32 _id)
@@ -711,8 +706,9 @@ contract FluxAggregator is AggregatorInterface, Owned {
 
   function recordSubmission(int256 _answer, uint32 _id)
     private
-    ensureEligibleStartedRound(_id)
   {
+    require(acceptingSubmissions(_id), "Cannot update an unstarted round");
+
     rounds[_id].details.answers.push(_answer);
     oracles[msg.sender].lastReportedRound = _id;
     oracles[msg.sender].latestAnswer = _answer;
@@ -776,11 +772,6 @@ contract FluxAggregator is AggregatorInterface, Owned {
   modifier ensureValidOracleRound(uint32 _id) {
     bytes memory error = validateOracleRound(_id);
     require(error.length == 0, string(error));
-    _;
-  }
-
-  modifier ensureEligibleStartedRound(uint32 _id) {
-    require(validateActiveRound(_id).length == 0, "Cannot update an inactive round");
     _;
   }
 
