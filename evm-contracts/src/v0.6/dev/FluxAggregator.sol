@@ -433,8 +433,8 @@ contract FluxAggregator is AggregatorInterface, Owned {
     external
     onlyOwner()
   {
-    require(availableFunds >= _amount);
-    require(LINK.transfer(_recipient, _amount));
+    require(availableFunds >= _amount, "Not enough funds");
+    require(LINK.transfer(_recipient, _amount), "LINK transfer failed");
     updateAvailableFunds();
   }
 
