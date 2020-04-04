@@ -8,10 +8,17 @@ import "../Owned.sol";
  */
 contract Whitelisted is Owned {
 
+  bool public whitelistEnabled;
   mapping(address => bool) public whitelisted;
 
   event AddedToWhitelist(address user);
   event RemovedFromWhitelist(address user);
+
+  constructor()
+    public
+  {
+    whitelistEnabled = true;
+  }
 
   /**
    * @notice Adds an address to the whitelist
@@ -32,10 +39,30 @@ contract Whitelisted is Owned {
   }
 
   /**
+   * @notice makes the whitelist check enforced
+   */
+  function enableWhitelist()
+    external
+    onlyOwner()
+  {
+    whitelistEnabled = true;
+  }
+
+  /**
+   * @notice makes the whitelist check enforced
+   */
+  function disableWhitelist()
+    external
+    onlyOwner()
+  {
+    whitelistEnabled = false;
+  }
+
+  /**
    * @dev reverts if the caller is not whitelisted
    */
   modifier isWhitelisted() {
-    require(whitelisted[msg.sender], "Not whitelisted");
+    require(whitelisted[msg.sender] || !whitelistEnabled, "Not whitelisted");
     _;
   }
 }

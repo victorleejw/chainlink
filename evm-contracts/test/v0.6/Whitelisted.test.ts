@@ -22,10 +22,13 @@ describe('Whitelisted', () => {
     matchers.publicAbi(new WhitelistedFactory(), [
       'acceptOwnership',
       'addToWhitelist',
+      'disableWhitelist',
+      'enableWhitelist',
       'owner',
       'removeFromWhitelist',
       'transferOwnership',
       'whitelisted',
+      'whitelistEnabled',
     ])
   })
 
@@ -57,7 +60,7 @@ describe('Whitelisted', () => {
         expect(helpers.eventArgs(event).user).toEqual(personas.Eddy.address)
       })
 
-      it('allows the address to read from the whitelist', async () => {
+      it('allows whitelisted users', async () => {
         await whitelisted
           .connect(personas.Carol)
           .addToWhitelist(personas.Eddy.address)
@@ -105,13 +108,65 @@ describe('Whitelisted', () => {
         expect(helpers.eventArgs(event).user).toEqual(personas.Eddy.address)
       })
 
-      it('does not allow the address to read from the whitelist', async () => {
+      it('does not allow non-whitelisted users', async () => {
         await whitelisted
           .connect(personas.Carol)
           .removeFromWhitelist(personas.Eddy.address)
 
         await matchers.evmRevert(whitelisted.connect(personas.Eddy).getValue())
       })
+    })
+  })
+
+  describe('#whitelistEnabled', async () => {
+    it('defaults to true', async () => {
+      assert(await whitelisted.whitelistEnabled())
+    })
+  })
+
+  describe('#enableWhitelist', () => {
+    beforeEach(async () => {
+      await whitelisted
+        .connect(personas.Carol)
+        .addToWhitelist(personas.Eddy.address)
+    })
+
+    it('allows whitelisted users', async () => {
+      await whitelisted.connect(personas.Carol).enableWhitelist()
+
+      matchers.bigNum(
+        value,
+        await whitelisted.connect(personas.Eddy).getValue(),
+      )
+    })
+
+    it('does not allow non-whitelisted users', async () => {
+      await whitelisted.connect(personas.Carol).enableWhitelist()
+
+      await matchers.evmRevert(whitelisted.connect(personas.Ned).getValue())
+    })
+  })
+
+  describe('#disableWhitelist', () => {
+    beforeEach(async () => {
+      await whitelisted
+        .connect(personas.Carol)
+        .addToWhitelist(personas.Eddy.address)
+    })
+
+    it('allows whitelisted users', async () => {
+      await whitelisted.connect(personas.Carol).disableWhitelist()
+
+      matchers.bigNum(
+        value,
+        await whitelisted.connect(personas.Eddy).getValue(),
+      )
+    })
+
+    it('allows non-whitelisted users', async () => {
+      await whitelisted.connect(personas.Carol).disableWhitelist()
+
+      matchers.bigNum(value, await whitelisted.connect(personas.Ned).getValue())
     })
   })
 })
